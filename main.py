@@ -5,7 +5,7 @@ from moviepy.editor import VideoFileClip
 import yt_dlp
 
 # 1. Whisper ашиглан видеоноос текст гаргах
-model = whisper.load_model("base")  # "small", "medium" боломжтой
+model = whisper.load_model("medium")  # "small", "medium" боломжтой
 result = model.transcribe("input/video.mp4", language="Mongolian")
 
 
