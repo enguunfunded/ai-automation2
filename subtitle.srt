@@ -1,0 +1,25 @@
+import whisper
+
+# 1. Whisper загвар ачаалах
+model = whisper.load_model("base")
+
+# 2. Видеог транскрипт хийх
+result = model.transcribe("input/video.mp4")
+
+# 3. Цаг хугацааг SRT формат руу хөрвүүлэх функц
+def format_time(seconds):
+    h = int(seconds // 3600)
+    m = int((seconds % 3600) // 60)
+    s = int(seconds % 60)
+    ms = int((seconds - int(seconds)) * 1000)
+    return f"{h:02}:{m:02}:{s:02},{ms:03}"
+
+# 4. SRT файл үүсгэх
+with open("subtitle.srt", "w", encoding="utf-8") as f:
+    for i, segment in enumerate(result["segments"]):
+        start = format_time(segment["start"])
+        end = format_time(segment["end"])
+        text = segment["text"].strip()
+        f.write(f"{i+1}\n{start} --> {end}\n{text}\n\n")
+
+print("✅ Subtitle бичигдлээ: subtitle.srt")
