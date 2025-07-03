@@ -1,44 +1,39 @@
 import os
-from moviepy.video.io.VideoFileClip import VideoFileClip
+import whisper
+import subprocess
+from moviepy.editor import VideoFileClip
 import yt_dlp
 
-# === SETUP ===
-INPUT_FILE = "input/links.txt"
-OUTPUT_DIR = "output"
-SHORT_DURATION = 180  # 3 минутаар хуваана
-MAX_SHORTS = 5
+# 1. Whisper ашиглан видеоноос текст гаргах
+model = whisper.load_model("base")
+result = model.transcribe("input/video.mp4")
 
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+# 2. Subtitle формат бэлдэх
+def format_time(seconds):
+    h = int(seconds // 3600)
+    m = int((seconds % 3600) // 60)
+    s = int(seconds % 60)
+    ms = int((seconds - int(seconds)) * 1000)
+    return f"{h:02}:{m:02}:{s:02},{ms:03}"
 
-def download_video(url):
-    ydl_opts = {
-        'outtmpl': 'video.%(ext)s',
-        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/mp4',
-        'merge_output_format': 'mp4'
-    }
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        ydl.download([url])
-    return "video.mp4"
+# 3. SRT subtitle бичих
+with open("subtitle.srt", "w", encoding="utf-8") as f:
+    for i, segment in enumerate(result["segments"]):
+        start = format_time(segment["start"])
+        end = format_time(segment["end"])
+        text = segment["text"].strip()
+        f.write(f"{i+1}\n{start} --> {end}\n{text}\n\n")
 
-def create_shorts(video_path, output_dir):
-    clip = VideoFileClip(video_path)
-    duration = clip.duration
-    segment = min(SHORT_DURATION, duration / MAX_SHORTS)
+print("✅ SRT хадгалагдлаа: subtitle.srt")
 
-    for i in range(MAX_SHORTS):
-        start = i * segment
-        end = min(start + segment, duration)
-        short_clip = clip.subclip(start, end)
-        short_clip.write_videofile(f"{output_dir}/short{i+1}.mp4", codec="libx264")
-    clip.close()
+# 4. FFmpeg ашиглан subtitle-г видеонд шингээх
+input_video = "input/video.mp4"
+output_video = "output/video_with_subs.mp4"
+subtitles = "subtitle.srt"
 
-# === MAIN ===
-with open(INPUT_FILE, "r") as f:
-    video_url = f.readline().strip()
-
-print(f"[INFO] Downloading video from: {video_url}")
-video_file = download_video(video_url)
-
-print("[INFO] Creating short videos...")
-create_shorts(video_file, OUTPUT_DIR)
-print("[DONE] Shorts created successfully.")
+subprocess.run([
+    "ffmpeg", "-i", input_video,
+    "-vf", f"subtitles={subtitles}",
+    "-c:a", "copy",
+    output_video
+])
