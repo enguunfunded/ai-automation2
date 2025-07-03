@@ -5,8 +5,9 @@ from moviepy.editor import VideoFileClip
 import yt_dlp
 
 # 1. Whisper ашиглан видеоноос текст гаргах
-model = whisper.load_model("base")
-result = model.transcribe("input/video.mp4")
+model = whisper.load_model("base")  # "small", "medium" боломжтой
+result = model.transcribe("input/video.mp4", language="Mongolian")
+
 
 # 2. Subtitle формат бэлдэх
 def format_time(seconds):
