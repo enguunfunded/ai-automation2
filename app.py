@@ -1,36 +1,26 @@
 import streamlit as st
-from main import download_video, create_shorts
+from moviepy.editor import VideoFileClip
 import os
 
-INPUT_FILE = "input/links.txt"
-OUTPUT_DIR = "output"
+st.set_page_config(page_title="YouTube Shorts Cutter", layout="centered")
+st.title("🎬 YouTube Shorts Cutter")
 
-st.set_page_config(page_title="YouTube Shorts Generator")
-st.title("🎬 YouTube Shorts Generator")
+st.markdown("MP4 видео файл оруулна уу. Бид үүнийг богино бичлэг болгон хөрвүүлнэ.")
 
-video_url = st.text_input("📥 YouTube Video Link", "")
+uploaded_file = st.file_uploader("📤 Видео оруулах (MP4)", type=["mp4"])
 
-if st.button("🎞 Short Video үүсгэх"):
-    if not video_url.strip():
-        st.warning("Та YouTube линк оруулна уу.")
-    else:
-        with open(INPUT_FILE, "w") as f:
-            f.write(video_url.strip())
+if uploaded_file is not None:
+    with st.spinner("⏳ Видео боловсруулж байна..."):
+        with open("input.mp4", "wb") as f:
+            f.write(uploaded_file.read())
 
-        st.info("📥 Видеог татаж авч байна...")
-        try:
-            video_file = download_video(video_url)
-        except Exception as e:
-            st.error(f"⛔ Алдаа гарлаа: {e}")
-            st.stop()
+        clip = VideoFileClip("input.mp4")
+        short_duration = min(60, clip.duration)
+        short = clip.subclip(0, short_duration)
+        short.write_videofile("short.mp4", codec="libx264", audio_codec="aac")
 
-        st.info("✂️ Богино видео хувааж байна...")
-        create_shorts(video_file, OUTPUT_DIR)
+    st.success("✅ Богино видео амжилттай үүсгэлээ!")
+    st.video("short.mp4")
 
-        st.success("✅ Богино видеонууд амжилттай үүслээ!")
-        st.video(os.path.join(OUTPUT_DIR, "short1.mp4"))
-
-        for i in range(2, 6):
-            path = os.path.join(OUTPUT_DIR, f"short{i}.mp4")
-            if os.path.exists(path):
-                st.video(path)
+    with open("short.mp4", "rb") as f:
+        st.download_button("⬇️ Видео татах", f, file_name="short.mp4", mime="video/mp4")
