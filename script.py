@@ -1,28 +1,19 @@
-import os
 import whisper
-from moviepy.editor import VideoFileClip, TextClip, CompositeVideoClip
 
-# 1. Extract audio
-video_path = "input/video.mp4"
-audio_path = "audio/audio.wav"
-
-os.makedirs("audio", exist_ok=True)
-os.system(f"ffmpeg -i {video_path} -vn -acodec pcm_s16le -ar 16000 -ac 1 {audio_path}")
-
-# 2. Transcribe audio with Whisper
 model = whisper.load_model("base")
-result = model.transcribe(audio_path)
-full_text = result["text"]
-print("AI-гаар үүсгэсэн текст:", full_text)
+result = model.transcribe("input/video.mp4")
+segments = result["segments"]
 
-# 3. Extract short video (жишээ: эхний 30 секунд)
-clip = VideoFileClip(video_path).subclip(0, 30)
+def format_time(seconds):
+    h = int(seconds // 3600)
+    m = int((seconds % 3600) // 60)
+    s = int(seconds % 60)
+    ms = int((seconds - int(seconds)) * 1000)
+    return f"{h:02}:{m:02}:{s:02},{ms:03}"
 
-# 4. Create text overlay
-txt_clip = TextClip(full_text[:100] + "...", fontsize=36, color='white', font='Arial-Bold')
-txt_clip = txt_clip.set_position(("center", "bottom")).set_duration(clip.duration)
-
-# 5. Combine video and text
-final = CompositeVideoClip([clip, txt_clip])
-os.makedirs("output", exist_ok=True)
-final.write_videofile("output/short_with_text.mp4", codec="libx264", audio_codec="aac")
+with open("subtitle.srt", "w", encoding="utf-8") as f:
+    for i, segment in enumerate(segments):
+        start = format_time(segment["start"])
+        end = format_time(segment["end"])
+        text = segment["text"].strip()
+        f.write(f"{i+1}\n{start} --> {end}\n{text}\n\n")
